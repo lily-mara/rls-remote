@@ -18,6 +18,10 @@ install:
 
 build: false
 
+artifacts:
+  - name: rls-remote
+    path: target/release/rls-remote
+
 test_script:
   - cargo build --release
   - cargo test --target %TARGET%
