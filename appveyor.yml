@@ -1,5 +1,5 @@
 environment:
-  RUSTUP_USE_HYPER: 1
+  RUSTUP_USE_REQWEST: 1
   CARGO_HTTP_CHECK_REVOKE: false
   matrix:
   - TARGET: x86_64-pc-windows-gnu
@@ -21,4 +21,3 @@ build: false
 test_script:
   - cargo build --release
   - cargo test --target %TARGET%
-  - cargo test --manifest-path libc-test/Cargo.toml --target %TARGET%
