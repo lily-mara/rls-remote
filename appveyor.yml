@@ -20,7 +20,7 @@ build: false
 
 artifacts:
   - name: rls-remote
-    path: target/release/rls-remote
+    path: target/release/rls-remote.exe
 
 test_script:
   - cargo build --release
