@@ -1,34 +1,41 @@
-extern crate futures;
-extern crate tokio_core;
-extern crate tokio_io;
-extern crate tokio_stdin_stdout;
-
-use std::net::ToSocketAddrs;
-
-use futures::Future;
-use tokio_core::net::TcpStream;
-use tokio_core::reactor::Core;
-use tokio_io::AsyncRead;
+use std::net::TcpStream;
+use std::thread;
+use std::io::prelude::*;
 
 fn main() {
-    let mut core = Core::new().unwrap();
-    let handle = core.handle();
-    let addr = std::env::args()
-        .nth(1)
-        .expect("You must provide an address in the form \"host:port\"")
-        .to_socket_addrs()
-        .expect("Failed to convert to socket address")
-        .next()
-        .expect("Failed to convert to socket address");
+    let stream_reader =
+        TcpStream::connect("127.0.0.1:44321").expect("Failed to connect to TCP socket");
+    let stream_writer = stream_reader
+        .try_clone()
+        .expect("Failed to clone TCP socket");
 
-    let socket = TcpStream::connect(&addr, &handle);
+    let read = exchange(stream_reader, std::io::stdout());
+    let write = exchange(std::io::stdin(), stream_writer);
 
-    core.run(socket.and_then(|socket| {
-        let (socket_read, socket_write) = socket.split();
+    read.join().expect("Failed to join reader thread");
+    write.join().expect("Failed to join writer thread");
+}
 
-        tokio_io::io::copy(socket_read, tokio_stdin_stdout::stdout(0)).join(tokio_io::io::copy(
-            tokio_stdin_stdout::stdin(0),
-            socket_write,
-        ))
-    })).expect("Failed to run loop");
+fn exchange<R, W>(mut reader: R, mut writer: W) -> thread::JoinHandle<()>
+where
+    R: Read + Send + 'static,
+    W: Write + Send + 'static,
+{
+    thread::spawn(move || {
+        let mut buf = vec![0u8; 255];
+        let mut buffer = buf.as_mut_slice();
+
+        loop {
+            if let Ok(_) = reader.read(&mut buffer) {
+                writer.write(buffer).expect("failed to write to stdout");
+            }
+            clear(buffer);
+        }
+    })
+}
+
+fn clear(buf: &mut [u8]) {
+    for i in buf.iter_mut() {
+        *i = 0;
+    }
 }
